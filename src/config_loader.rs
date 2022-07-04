@@ -70,7 +70,7 @@ struct UndefinedEnvError {
 
 #[derive(Error, Debug, Diagnostic)]
 #[error("invalid regex for environment variable")]
-#[diagnostic(code(boatctl::config::undefined_env))]
+#[diagnostic(code(boatctl::config::invalid_regex))]
 struct InvalidEnvRegexError {
   #[source_code]
   src: NamedSource,
@@ -81,13 +81,13 @@ struct InvalidEnvRegexError {
 
 #[derive(Error, Debug, Diagnostic)]
 #[error("environment variable value does not match spec")]
-#[diagnostic(code(boatctl::config::undefined_env))]
+#[diagnostic(code(boatctl::config::invalid_env))]
 struct EnvDoesNotMatchSpec {
   #[source_code]
   src: NamedSource,
 
   #[label("defined here")]
-  regex: SourceSpan,
+  def: SourceSpan,
 
   #[help]
   help: String,
@@ -269,7 +269,7 @@ fn validate_env_defined_and_valid(
           return Err(
             EnvDoesNotMatchSpec {
               src: NamedSource::new(config_name, config_text.to_string()),
-              regex: toml_spanned_to_source_span(kv.0),
+              def: toml_spanned_to_source_span(kv.0),
               help: format!("regex: {}", regex),
             }
             .into(),
@@ -282,5 +282,5 @@ fn validate_env_defined_and_valid(
 }
 
 fn toml_spanned_to_source_span<T>(spanned: &Spanned<T>) -> SourceSpan {
-  SourceSpan::from((spanned.start(), spanned.end()))
+  SourceSpan::from(spanned.start()..spanned.end())
 }

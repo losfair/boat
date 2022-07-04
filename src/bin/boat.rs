@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
   let (_spec, config) = match config_loader::load_from_file(&opt.spec, &opt.config) {
     Ok(x) => x,
     Err(e) => {
-      eprintln!("{}", e);
+      eprintln!("{:?}", e);
       std::process::exit(1);
     }
   };
