@@ -1,0 +1,49 @@
+schema {
+  query: RootQueryType
+  mutation: RootMutationType
+}
+
+"Proxy routing info"
+type ProxyRoutingInfo {
+  appId: String!
+  deploymentId: String!
+}
+
+type RootQueryType {
+  deployment(id: String!): Deployment
+  listDeployment(appId: String!, first: Int, offset: Int): [Deployment]
+  proxy: ProxyQueryObject
+}
+
+"""
+The `DateTime` scalar type represents a date and time in the UTC
+timezone. The DateTime appears in a JSON response as an ISO8601 formatted
+string, including UTC timezone ("Z"). The parsed date and time string will
+be converted to UTC if there is an offset.
+"""
+scalar DateTime
+
+"Proxy query object"
+type ProxyQueryObject {
+  appSubdomain(subdomain: String!): ProxyRoutingInfo
+  deploymentSubdomain(subdomain: String!): ProxyRoutingInfo
+}
+
+"Pre-deployment"
+type PreDeployment {
+  url: String!
+  package: String!
+}
+
+"Deployment"
+type Deployment {
+  id: String!
+  appId: String!
+  createdAt: DateTime!
+}
+
+type RootMutationType {
+  prepareDeployment(appId: String!): PreDeployment
+  createDeployment(appId: String!, package: String!, metadata: String): Deployment
+  deleteDeployment(id: String!): Deployment
+}

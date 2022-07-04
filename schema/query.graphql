@@ -1,0 +1,21 @@
+mutation RunDeploymentCreation($appId: String!, $metadata: String!, $package: String!) {
+  createDeployment(appId: $appId, metadata: $metadata, package: $package) {
+    id
+    appId
+    createdAt
+  }
+}
+
+mutation RunDeploymentPreparation($appId: String!) {
+  prepareDeployment(appId: $appId) {
+    package
+    url
+  }
+}
+
+query RunDeploymentList($appId: String!, $first: Int, $offset: Int) {
+  listDeployment(appId: $appId, first: $first, offset: $offset) {
+    id
+    createdAt
+  }
+}
