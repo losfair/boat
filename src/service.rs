@@ -1,8 +1,14 @@
-use graphql_client::QueryBody;
+use graphql_client::{GraphQLQuery, QueryBody};
 use reqwest::{header::HeaderValue, Body, Method, Request, Url};
 use serde::{Deserialize, Serialize};
+use std::io::Write;
+use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
-use crate::authenticator::Credentials;
+use crate::{
+  authenticator::Credentials,
+  metadata::AppMetadata,
+  schema::{self, RunDeploymentCreation, RunDeploymentPreparation},
+};
 
 pub struct Service {
   client: reqwest::Client,
@@ -58,5 +64,76 @@ impl Service {
       .await
       .map_err(|e| anyhow::Error::from(e).context("api call failed"))?;
     Ok(body)
+  }
+
+  pub async fn deploy(
+    &self,
+    app_id: &str,
+    metadata: &AppMetadata,
+    package: &[u8],
+  ) -> anyhow::Result<()> {
+    let q = RunDeploymentPreparation::build_query(schema::run_deployment_preparation::Variables {
+      app_id: app_id.to_string(),
+    });
+    let rsp = self
+      .call::<_, schema::run_deployment_preparation::ResponseData>(q)
+      .await?
+      .check_service_error()?;
+    let prep = rsp
+      .data
+      .as_ref()
+      .and_then(|x| x.prepare_deployment.as_ref())
+      .ok_or_else(|| anyhow::anyhow!("missing data in prep"))?;
+    log::info!("uploading to s3: {}", prep.url);
+    let s3_rsp = self
+      .client
+      .put(prep.url.as_str())
+      .body(package.to_vec())
+      .send()
+      .await?;
+    let s3_status = s3_rsp.status();
+    if !s3_status.is_success() {
+      anyhow::bail!("s3 upload failed: {}", s3_status);
+    }
+    let metadata = serde_json::to_string(metadata)?;
+    log::info!("committing deployment");
+    let q = RunDeploymentCreation::build_query(schema::run_deployment_creation::Variables {
+      app_id: app_id.to_string(),
+      metadata,
+      package: prep.package.clone(),
+    });
+    let rsp = self
+      .call::<_, schema::run_deployment_creation::ResponseData>(q)
+      .await?
+      .check_service_error()?;
+    let rsp = rsp
+      .data
+      .as_ref()
+      .and_then(|x| x.create_deployment.as_ref())
+      .ok_or_else(|| anyhow::anyhow!("missing data in result"))?;
+
+    {
+      let mut stdout = StandardStream::stdout(ColorChoice::Auto);
+      stdout.set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Cyan)))?;
+      writeln!(&mut stdout, "Created deployment {}.", rsp.id)?;
+      stdout.reset()?;
+    }
+    println!("Preview: {}", rsp.url);
+    println!("Visit the dashboard to promote this deployment to live.");
+    Ok(())
+  }
+}
+
+pub trait GqlResponseExt: Sized {
+  fn check_service_error(self) -> anyhow::Result<Self>;
+}
+
+impl<D> GqlResponseExt for graphql_client::Response<D> {
+  fn check_service_error(self) -> anyhow::Result<Self> {
+    let errors = self.errors.as_ref().map(|x| x.as_slice()).unwrap_or(&[]);
+    if !errors.is_empty() {
+      anyhow::bail!("service returned error: {}", errors[0].message);
+    }
+    Ok(self)
   }
 }

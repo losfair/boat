@@ -120,6 +120,7 @@ dependencies = [
  "serde_json",
  "structopt",
  "tabled",
+ "termcolor",
  "thiserror",
  "tokio",
  "toml",

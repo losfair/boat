@@ -3,6 +3,7 @@ mutation RunDeploymentCreation($appId: String!, $metadata: String!, $package: St
     id
     appId
     createdAt
+    url
   }
 }
 
@@ -17,5 +18,6 @@ query RunDeploymentList($appId: String!, $first: Int, $offset: Int) {
   listDeployment(appId: $appId, first: $first, offset: $offset) {
     id
     createdAt
+    live
   }
 }

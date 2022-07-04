@@ -1,7 +1,7 @@
 use boatctl::{
   config_loader,
   schema::{self, RunDeploymentList},
-  service::Service,
+  service::{Service, GqlResponseExt}, metadata::AppMetadata,
 };
 use graphql_client::GraphQLQuery;
 use structopt::StructOpt;
@@ -37,7 +37,9 @@ struct Opt {
 #[derive(Debug, StructOpt)]
 enum Cmd {
   /// Create deployment.
-  Deploy,
+  Deploy {
+    package: String,
+  },
 
   /// List deployments.
   List,
@@ -66,11 +68,8 @@ async fn main() -> anyhow::Result<()> {
       });
       let rsp = service
         .call::<_, schema::run_deployment_list::ResponseData>(q)
-        .await?;
-      let errors = rsp.errors.as_ref().map(|x| x.as_slice()).unwrap_or(&[]);
-      if !errors.is_empty() {
-        anyhow::bail!("service returned error: {}", errors[0].message);
-      }
+        .await?
+        .check_service_error()?;
       let x = rsp
         .data
         .as_ref()
@@ -82,13 +81,16 @@ async fn main() -> anyhow::Result<()> {
         .map(|x| DeploymentEntry {
           id: &x.id,
           created_at: &x.created_at,
+          live: if x.live { "✔" } else { "" },
         })
         .collect::<Vec<_>>();
       let table = Table::new(&table_data).with(Style::psql());
       println!("{}", table);
     }
-    Cmd::Deploy => {
-      todo!()
+    Cmd::Deploy { package } => {
+      let package = std::fs::read(package).map_err(|e| anyhow::Error::from(e).context("failed to read package"))?;
+      let metadata = AppMetadata::from_config(&config);
+      service.deploy(&config.id, &metadata, &package).await?;
     }
   }
   Ok(())
@@ -100,4 +102,6 @@ struct DeploymentEntry<'a> {
   id: &'a str,
   #[tabled(rename = "Created at")]
   created_at: &'a str,
+  #[tabled(rename = "Live")]
+  live: &'static str,
 }

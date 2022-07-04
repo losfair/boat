@@ -40,6 +40,8 @@ type Deployment {
   id: String!
   appId: String!
   createdAt: DateTime!
+  live: Boolean!
+  url: String!
 }
 
 type RootMutationType {
