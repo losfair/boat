@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::config::{AppConfig, AppSpec};
 use miette::{Diagnostic, IntoDiagnostic, NamedSource, SourceOffset, SourceSpan};
@@ -125,7 +125,10 @@ pub fn load(
   Ok((parsed_spec, parsed_config))
 }
 
-pub fn load_from_file(spec_path: &str, config_path: &str) -> miette::Result<(AppSpec, AppConfig)> {
+pub fn load_from_file(
+  spec_path: &str,
+  config_path: &str,
+) -> miette::Result<((PathBuf, AppSpec), (PathBuf, AppConfig))> {
   let spec_path = std::fs::canonicalize(spec_path)
     .into_diagnostic()
     .map_err(|e| e.context("cannot resolve spec path"))?;
@@ -140,10 +143,12 @@ pub fn load_from_file(spec_path: &str, config_path: &str) -> miette::Result<(App
     .into_diagnostic()
     .map_err(|e| e.context("cannot read config"))?;
 
-  load(
+  let (spec, config) = load(
     (spec_path.to_string_lossy().as_ref(), &spec),
     (config_path.to_string_lossy().as_ref(), &config),
-  )
+  )?;
+
+  Ok(((spec_path, spec), (config_path, config)))
 }
 
 fn parse_toml<T: for<'de> Deserialize<'de>>(name: &str, text: &str) -> Result<T, ConfigParseError> {

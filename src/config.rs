@@ -10,6 +10,13 @@ pub struct AppSpec {
   pub env: Vec<Spanned<EnvSpecOrPlain>>,
   #[serde(default)]
   pub secrets: Vec<Spanned<EnvSpecOrPlain>>,
+
+  pub build: Option<String>,
+
+  #[serde(rename = "static")]
+  pub _static: Option<String>,
+
+  pub artifact: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

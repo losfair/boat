@@ -1,7 +1,9 @@
 use boatctl::{
   config_loader,
+  metadata::AppMetadata,
+  package_builder::build_package,
   schema::{self, RunDeploymentList},
-  service::{Service, GqlResponseExt}, metadata::AppMetadata,
+  service::{GqlResponseExt, Service},
 };
 use graphql_client::GraphQLQuery;
 use structopt::StructOpt;
@@ -36,10 +38,8 @@ struct Opt {
 
 #[derive(Debug, StructOpt)]
 enum Cmd {
-  /// Create deployment.
-  Deploy {
-    package: String,
-  },
+  /// Create deployme&nt.
+  Deploy,
 
   /// List deployments.
   List,
@@ -52,13 +52,14 @@ async fn main() -> anyhow::Result<()> {
   let opt = Opt::from_args();
 
   let service = Service::new(&opt.endpoint, &opt.credentials)?;
-  let (_spec, config) = match config_loader::load_from_file(&opt.spec, &opt.config) {
-    Ok(x) => x,
-    Err(e) => {
-      eprintln!("{:?}", e);
-      std::process::exit(1);
-    }
-  };
+  let ((spec_path, spec), (_config_path, config)) =
+    match config_loader::load_from_file(&opt.spec, &opt.config) {
+      Ok(x) => x,
+      Err(e) => {
+        eprintln!("{:?}", e);
+        std::process::exit(1);
+      }
+    };
   match &opt.cmd {
     Cmd::List => {
       let q = RunDeploymentList::build_query(schema::run_deployment_list::Variables {
@@ -87,8 +88,9 @@ async fn main() -> anyhow::Result<()> {
       let table = Table::new(&table_data).with(Style::psql());
       println!("{}", table);
     }
-    Cmd::Deploy { package } => {
-      let package = std::fs::read(package).map_err(|e| anyhow::Error::from(e).context("failed to read package"))?;
+    Cmd::Deploy => {
+      let package = build_package(&spec_path, &spec, &config)
+        .map_err(|e| e.context("failed to build package"))?;
       let metadata = AppMetadata::from_config(&config);
       service.deploy(&config.id, &metadata, &package).await?;
     }
