@@ -15,7 +15,7 @@ struct Opt {
   /// Lighthouse service endpoint.
   #[structopt(
     long,
-    default_value = "https://cloud.blueboat.io/graphql",
+    default_value = "https://magic.blueboat.io/graphql",
     env = "BOAT_ENDPOINT"
   )]
   endpoint: String,
