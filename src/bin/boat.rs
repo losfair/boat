@@ -74,8 +74,7 @@ async fn main() -> anyhow::Result<()> {
       let x = rsp
         .data
         .as_ref()
-        .and_then(|x| x.list_deployment.as_ref())
-        .map(|x| x.iter().filter_map(|x| x.as_ref()).collect::<Vec<_>>())
+        .map(|x| x.list_deployment.as_slice())
         .unwrap_or_default();
       let table_data = x
         .iter()

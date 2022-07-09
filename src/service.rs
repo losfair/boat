@@ -82,7 +82,7 @@ impl Service {
     let prep = rsp
       .data
       .as_ref()
-      .and_then(|x| x.prepare_deployment.as_ref())
+      .map(|x| &x.prepare_deployment)
       .ok_or_else(|| anyhow::anyhow!("missing data in prep"))?;
     log::info!("uploading to s3: {}", prep.url);
     let s3_rsp = self
@@ -109,7 +109,7 @@ impl Service {
     let rsp = rsp
       .data
       .as_ref()
-      .and_then(|x| x.create_deployment.as_ref())
+      .map(|x| &x.create_deployment)
       .ok_or_else(|| anyhow::anyhow!("missing data in result"))?;
 
     {

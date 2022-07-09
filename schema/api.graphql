@@ -9,10 +9,18 @@ type ProxyRoutingInfo {
   deploymentId: String!
 }
 
+"Deployment log"
+type DeploymentLog {
+  ts: Int!
+  requestId: String!
+  seq: Int!
+  message: String!
+}
+
 type RootQueryType {
   deployment(id: String!): Deployment
-  listDeployment(appId: String!, first: Int, offset: Int): [Deployment]
-  proxy: ProxyQueryObject
+  listDeployment(appId: String!, first: Int, offset: Int): [Deployment!]!
+  proxy: ProxyQueryObject!
 }
 
 """
@@ -25,14 +33,20 @@ scalar DateTime
 
 "Proxy query object"
 type ProxyQueryObject {
-  appSubdomain(subdomain: String!): ProxyRoutingInfo
-  deploymentSubdomain(subdomain: String!): ProxyRoutingInfo
+  appSubdomain(subdomain: String!): ProxyRoutingInfo!
+  deploymentSubdomain(subdomain: String!): ProxyRoutingInfo!
 }
 
 "Pre-deployment"
 type PreDeployment {
   url: String!
   package: String!
+}
+
+"Deployment log list"
+type DeploymentLogList {
+  data: [DeploymentLog!]!
+  cursor: String
 }
 
 "Deployment"
@@ -42,10 +56,11 @@ type Deployment {
   createdAt: DateTime!
   live: Boolean!
   url: String!
+  logs(first: Int, before: String): DeploymentLogList!
 }
 
 type RootMutationType {
-  prepareDeployment(appId: String!): PreDeployment
-  createDeployment(appId: String!, package: String!, metadata: String): Deployment
+  prepareDeployment(appId: String!): PreDeployment!
+  createDeployment(appId: String!, package: String!, metadata: String): Deployment!
   deleteDeployment(id: String!): Deployment
 }
