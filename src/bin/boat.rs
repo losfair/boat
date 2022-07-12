@@ -3,7 +3,7 @@ use boatctl::{
   metadata::AppMetadata,
   package_builder::build_package,
   schema::{self, RunDeploymentList},
-  service::{GqlResponseExt, Service},
+  service::{GqlResponseExt, Service}, logloader::LogLoader,
 };
 use graphql_client::GraphQLQuery;
 use structopt::StructOpt;
@@ -38,8 +38,19 @@ struct Opt {
 
 #[derive(Debug, StructOpt)]
 enum Cmd {
-  /// Create deployme&nt.
+  /// Create deployment.
   Deploy,
+
+  /// View logs.
+  #[structopt(alias = "log")]
+  Logs {
+    /// Deployment ID to query logs for. If unspecified, the current deployment is used.
+    deployment: Option<String>,
+
+    /// Page size.
+    #[structopt(short, long, default_value = "100")]
+    page_size: u32,
+  },
 
   /// List deployments.
   List,
@@ -86,6 +97,9 @@ async fn main() -> anyhow::Result<()> {
         .collect::<Vec<_>>();
       let table = Table::new(&table_data).with(Style::psql());
       println!("{}", table);
+    }
+    Cmd::Logs {deployment, page_size} => {
+
     }
     Cmd::Deploy => {
       let package = build_package(&spec_path, &spec, &config)

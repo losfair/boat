@@ -11,12 +11,21 @@ pub struct AppSpec {
   #[serde(default)]
   pub secrets: Vec<Spanned<EnvSpecOrPlain>>,
 
+  #[serde(default)]
+  pub mysql: Vec<Spanned<String>>,
+
   pub build: Option<String>,
 
   #[serde(rename = "static")]
   pub _static: Option<String>,
 
   pub artifact: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MysqlMetadata {
+  pub url: String,
+  pub root_certificate: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -54,6 +63,8 @@ pub struct AppConfig {
   pub env: IndexMap<Spanned<String>, String>,
   #[serde(default)]
   pub secrets: IndexMap<Spanned<String>, String>,
+  #[serde(default)]
+  pub mysql: IndexMap<Spanned<String>, MysqlMetadata>,
   #[serde(default)]
   pub detached_secrets: bool,
 }

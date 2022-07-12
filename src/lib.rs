@@ -5,3 +5,5 @@ pub mod metadata;
 pub mod package_builder;
 pub mod schema;
 pub mod service;
+pub mod logloader;
+pub mod cursor;

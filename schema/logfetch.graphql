@@ -1,0 +1,29 @@
+query GetAppLogs($id: String!, $first: Int, $before: String) {
+  app(id: $id) {
+    currentDeployment {
+      logs(first: $first, before: $before) {
+        cursor
+        data {
+          ts
+          requestId
+          seq
+          message
+        }
+      }
+    }
+  }
+}
+
+query GetDeploymentLogs($id: String!, $first: Int, $before: String) {
+  deployment(id: $id) {
+    logs(first: $first, before: $before) {
+      cursor
+      data {
+        ts
+        requestId
+        seq
+        message
+      }
+    }
+  }
+}

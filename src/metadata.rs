@@ -2,12 +2,13 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
-use crate::config::AppConfig;
+use crate::config::{AppConfig, MysqlMetadata};
 
 #[derive(Serialize)]
 pub struct AppMetadata {
   pub env: HashMap<String, String>,
   pub secrets: HashMap<String, String>,
+  pub mysql: HashMap<String, MysqlMetadata>,
 }
 
 impl AppMetadata {
@@ -20,6 +21,11 @@ impl AppMetadata {
         .collect(),
       secrets: config
         .secrets
+        .iter()
+        .map(|(k, v)| (k.get_ref().clone(), v.clone()))
+        .collect(),
+      mysql: config
+        .mysql
         .iter()
         .map(|(k, v)| (k.get_ref().clone(), v.clone()))
         .collect(),

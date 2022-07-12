@@ -20,6 +20,7 @@ type DeploymentLog {
 type RootQueryType {
   deployment(id: String!): Deployment
   listDeployment(appId: String!, first: Int, offset: Int): [Deployment!]!
+  app(id: String!): App
   proxy: ProxyQueryObject!
 }
 
@@ -41,6 +42,16 @@ type ProxyQueryObject {
 type PreDeployment {
   url: String!
   package: String!
+}
+
+"App"
+type App {
+  id: String!
+  name: String!
+  currentDeploymentId: String
+  subdomain: String
+  createdAt: DateTime!
+  currentDeployment: Deployment
 }
 
 "Deployment log list"
