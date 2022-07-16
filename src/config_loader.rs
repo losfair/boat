@@ -80,6 +80,17 @@ struct UndefinedMysqlError {
 }
 
 #[derive(Error, Debug, Diagnostic)]
+#[error("undefined pubsub namespace")]
+#[diagnostic(code(boatctl::config::undefined_pubsub))]
+struct UndefinedPubsubError {
+  #[source_code]
+  src: NamedSource,
+
+  #[label("specified here")]
+  def: SourceSpan,
+}
+
+#[derive(Error, Debug, Diagnostic)]
 #[error("invalid regex for environment variable")]
 #[diagnostic(code(boatctl::config::invalid_regex))]
 struct InvalidEnvRegexError {
@@ -120,7 +131,8 @@ pub fn load(
   (config_name, config): (&str, &str),
 ) -> miette::Result<(AppSpec, AppConfig)> {
   let parsed_spec: AppSpec = parse_toml(spec_name, spec)?;
-  let parsed_config: AppConfig = parse_toml(config_name, config)?;
+  let mut parsed_config: AppConfig = parse_toml(config_name, config)?;
+  parsed_config.normalize();
 
   validate_spec_no_dup_env_or_secret((spec_name, spec, &parsed_spec))?;
   validate_config_no_dup_env_or_secret((config_name, config, &parsed_config))?;
@@ -133,6 +145,10 @@ pub fn load(
     (config_name, config, &parsed_config),
   )?;
   validate_mysql_defined(
+    (spec_name, spec, &parsed_spec),
+    (config_name, config, &parsed_config),
+  )?;
+  validate_pubsub_defined(
     (spec_name, spec, &parsed_spec),
     (config_name, config, &parsed_config),
   )?;
@@ -319,6 +335,26 @@ fn validate_mysql_defined(
   }
   Ok(())
 }
+
+fn validate_pubsub_defined(
+  (spec_name, spec_text, spec): (&str, &str, &AppSpec),
+  (_config_name, _config_text, config): (&str, &str, &AppConfig),
+) -> miette::Result<()> {
+  for item in spec.pubsub.iter() {
+    let value = config.pubsub.get(item.get_ref().as_str());
+    if value.is_none() {
+      return Err(
+        UndefinedPubsubError {
+          src: NamedSource::new(spec_name, spec_text.to_string()),
+          def: toml_spanned_to_source_span(item),
+        }
+        .into(),
+      );
+    }
+  }
+  Ok(())
+}
+
 fn toml_spanned_to_source_span<T>(spanned: &Spanned<T>) -> SourceSpan {
   SourceSpan::from(spanned.start()..spanned.end())
 }

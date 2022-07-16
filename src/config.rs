@@ -14,6 +14,9 @@ pub struct AppSpec {
   #[serde(default)]
   pub mysql: Vec<Spanned<String>>,
 
+  #[serde(default)]
+  pub pubsub: Vec<Spanned<String>>,
+
   pub build: Option<String>,
 
   #[serde(rename = "static")]
@@ -66,5 +69,41 @@ pub struct AppConfig {
   #[serde(default)]
   pub mysql: IndexMap<Spanned<String>, MysqlMetadata>,
   #[serde(default)]
+  pub pubsub: IndexMap<Spanned<String>, PubsubMetadataOrPlain>,
+  #[serde(default)]
   pub detached_secrets: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PubsubMetadata {
+  pub namespace: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum PubsubMetadataOrPlain {
+  Metadata(PubsubMetadata),
+  Plain(String),
+}
+
+impl AppConfig {
+  pub fn normalize(&mut self) {
+    for x in self.pubsub.values_mut() {
+      if let PubsubMetadataOrPlain::Plain(value) = x {
+        let value = value.clone();
+        *x = PubsubMetadataOrPlain::Metadata(PubsubMetadata {
+          namespace: value,
+        });
+      }
+    }
+  }
+}
+
+impl PubsubMetadataOrPlain {
+  pub fn unwrap_as_metadata(&self) -> &PubsubMetadata {
+    match self {
+      PubsubMetadataOrPlain::Metadata(x) => x,
+      PubsubMetadataOrPlain::Plain(_) => panic!("pubsub metadata not normalized")
+    }
+  }
 }
