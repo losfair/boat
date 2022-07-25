@@ -1,6 +1,6 @@
 [package]
 name = "boatctl"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Heyang Zhou <zhy20000919@hotmail.com>"]
 description = "CLI for Blueboat Cloud."
