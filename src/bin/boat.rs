@@ -1,9 +1,12 @@
+use std::path::Path;
+
+use anyhow::Context;
 use boatctl::{
   config_loader,
-  metadata::AppMetadata,
+  metadata::{AppMetadata, PackedAppMetadata},
   package_builder::build_package,
   schema::{self, RunDeploymentList},
-  service::{GqlResponseExt, Service}, logloader::LogLoader,
+  service::{GqlResponseExt, Service},
 };
 use graphql_client::GraphQLQuery;
 use structopt::StructOpt;
@@ -40,6 +43,13 @@ struct Opt {
 enum Cmd {
   /// Create deployment.
   Deploy,
+
+  /// Create package for single-tenant or custom deployment.
+  Pack {
+    /// Path to metadata output.
+    #[structopt(long, short = "o")]
+    output: String,
+  },
 
   /// View logs.
   #[structopt(alias = "log")]
@@ -98,14 +108,36 @@ async fn main() -> anyhow::Result<()> {
       let table = Table::new(&table_data).with(Style::psql());
       println!("{}", table);
     }
-    Cmd::Logs {deployment, page_size} => {
-
+    Cmd::Logs {
+      deployment: _deployment,
+      page_size: _page_size,
+    } => {
+      anyhow::bail!("Not implemented");
     }
     Cmd::Deploy => {
       let package = build_package(&spec_path, &spec, &config)
         .map_err(|e| e.context("failed to build package"))?;
       let metadata = AppMetadata::from_config(&config);
       service.deploy(&config.id, &metadata, &package).await?;
+    }
+    Cmd::Pack { output } => {
+      if !output.ends_with(".json") {
+        anyhow::bail!("metadata output path must end with .json");
+      }
+      let package_output = format!("{}.tar", output.strip_suffix(".json").unwrap());
+
+      let package = build_package(&spec_path, &spec, &config)
+        .map_err(|e| e.context("failed to build package"))?;
+      let package_filename = Path::new(&package_output)
+        .file_name()
+        .expect("failed to extract file name from package path")
+        .to_string_lossy();
+      let metadata = AppMetadata::from_config(&config);
+      let metadata = PackedAppMetadata::new(&metadata, &package_filename)?;
+      std::fs::write(output, serde_json::to_string_pretty(&metadata)?)
+        .with_context(|| format!("failed to write metadata to {}", output))?;
+      std::fs::write(&package_output, &package)
+        .with_context(|| format!("failed to write package to {}", package_output))?;
     }
   }
   Ok(())

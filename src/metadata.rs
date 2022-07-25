@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use anyhow::Result;
 use serde::Serialize;
 
 use crate::config::{AppConfig, MysqlMetadata, PubsubMetadata};
@@ -36,5 +37,36 @@ impl AppMetadata {
         .map(|(k, v)| (k.get_ref().clone(), v.unwrap_as_metadata().clone()))
         .collect(),
     }
+  }
+}
+
+#[derive(Serialize)]
+pub struct PackedAppMetadata {
+  pub version: String,
+  pub package: String,
+  pub env: HashMap<String, String>,
+
+  #[serde(default)]
+  pub mysql: HashMap<String, MysqlMetadata>,
+
+  #[serde(default)]
+  pub pubsub: HashMap<String, PubsubMetadata>,
+}
+
+impl PackedAppMetadata {
+  pub fn new(md: &AppMetadata, package_filename: &str) -> Result<Self> {
+    let out = Self {
+      version: "app".into(),
+      package: package_filename.into(),
+      env: md
+        .env
+        .iter()
+        .chain(md.secrets.iter())
+        .map(|x| (x.0.clone(), x.1.clone()))
+        .collect(),
+      mysql: md.mysql.clone(),
+      pubsub: md.pubsub.clone(),
+    };
+    Ok(out)
   }
 }
